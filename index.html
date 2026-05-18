@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <title>Field List ⚡</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #f3f4f6; font-family: 'Outfit', 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+    input[type=number] { -moz-appearance: textfield; }
+    * { -webkit-tap-highlight-color: transparent; }
+    .cat-img { width: 42px; height: 42px; object-fit: cover; border-radius: 10px; display: block; }
+    .cat-img-wrap { width: 42px; height: 42px; border-radius: 10px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+
+  <script type="text/babel">
+    const { useState, useCallback } = React;
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // MATERIALS DATA — Easy to edit!
+    // • Add an item:     drop a new string into any items: [ ] list
+    // • Add a category:  copy a { } block, paste it, change the fields
+    // • img:             Wikimedia Commons URL — shows real photo when online,
+    //                    falls back to a built-in icon when offline
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    const MATERIALS = [
+      {
+        category: "EMT Conduit",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/EMT_tubing_conduit_after_deburring_J._Morris_CC_BY-SA-3.0.jpg/120px-EMT_tubing_conduit_after_deburring_J._Morris_CC_BY-SA-3.0.jpg",
+        items: ['1/2" EMT', '3/4" EMT'],
+      },
+      {
+        category: "Couplings & Connectors",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/EMT_offset_for_coupling_1_J._Morris_CC_BY-SA-3.0.jpg/120px-EMT_offset_for_coupling_1_J._Morris_CC_BY-SA-3.0.jpg",
+        items: ['1/2" Couplings', '1/2" Connectors', '3/4" Couplings', '3/4" Connectors'],
+      },
+      {
+        category: "Straps & Hangers",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/EMT_offset_to_work_box_and_coupling_J._Morris_CC_BY-SA-3.0.jpg/120px-EMT_offset_to_work_box_and_coupling_J._Morris_CC_BY-SA-3.0.jpg",
+        items: [
+          '1/2" 1-Hole EMT Strap', '3/4" 1-Hole EMT Strap',
+          '1/2" Conduit Hanger Minerlac', '3/4" Conduit Hanger Minerlac',
+          '1/2" EMT Strut Clamp', '3/4" EMT Strut Clamp',
+        ],
+      },
+      {
+        category: "Caddy Hardware",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/EMT_offset_close_bend_for_two_work_boxes_J._Morris_CC_BY-SA-3.0.jpg/120px-EMT_offset_close_bend_for_two_work_boxes_J._Morris_CC_BY-SA-3.0.jpg",
+        items: [
+          'Caddy Clips 812M24', 'Caddy Clips 812M24 SM',
+          'Caddy Box Clip M24S', 'Caddy Conduit Support Bar 812MB18AR1',
+        ],
+      },
+      {
+        category: "Boxes & Covers",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Junction_box_anatomy.jpg/120px-Junction_box_anatomy.jpg",
+        items: ['4 Sq Boxes Deep', '4 Sq Box Covers'],
+      },
+      {
+        category: "Flex & Fittings",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f9/Flexible_metal_conduit_with_connector.jpg/120px-Flexible_metal_conduit_with_connector.jpg",
+        items: [
+          '1/2" Metal Flex', '1/2" Flex Connectors Straight',
+          '1/2" Flex Connectors 90°', '1/2" Flex to EMT Connectors',
+        ],
+      },
+      {
+        category: "Strut & Fasteners",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Strut_channel_assorted.jpg/120px-Strut_channel_assorted.jpg",
+        items: [
+          "Thin Strut 10'", "Thick Strut 10'", '1/4" Spring Nuts',
+          '1/4" Malleable Beam Clamps', '1/4" x20 x 1/2" Bolts',
+          '1/4" x20 x 1-1/2" Bolts', '1/4" x 1-1/4" Tapcons',
+          '1/4" Self Drilling Screws',
+        ],
+      },
+      {
+        category: "#12 THHN Wire",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Wire_spool.jpg/120px-Wire_spool.jpg",
+        items: [
+          "#12 THHN 500' Stranded Brown", "#12 THHN 500' Stranded Orange",
+          "#12 THHN 500' Stranded Yellow", "#12 THHN 500' Stranded Green",
+        ],
+      },
+      {
+        category: "#10 THHN Wire",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Wire_spool.jpg/120px-Wire_spool.jpg",
+        items: [
+          "#10 THHN 500' Stranded Brown", "#10 THHN 500' Stranded Orange",
+          "#10 THHN 500' Stranded Yellow", "#10 THHN 500' Stranded Green",
+        ],
+      },
+      {
+        category: "Data / Low Voltage",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Cat_6_cable.jpg/120px-Cat_6_cable.jpg",
+        items: ["Cat 5/6 — 500'", "Cat 5/6 — 1000'"],
+      },
+      {
+        category: "Wire Nuts",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Array_of_twist-on_wire_connectors_aka_wire_nuts_in_different_sizes.jpg/120px-Array_of_twist-on_wire_connectors_aka_wire_nuts_in_different_sizes.jpg",
+        items: ['Orange Wire Nuts', 'Yellow Wire Nuts', 'Tan Wire Nuts', 'Red Wire Nuts', 'Blue Wire Nuts'],
+      },
+      {
+        category: "Terminals & Tape",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/Electrical_tape.jpg/120px-Electrical_tape.jpg",
+        items: [
+          'Ring Terminals', 'Black Electric Tape', 'Brown Tape', 'Orange Tape',
+          'Yellow Tape', 'Green Tape', 'Red Tape', 'Blue Tape', 'White Tape',
+        ],
+      },
+    ];
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // END MATERIALS DATA
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    // Fallback SVG icons shown when offline or image fails
+    const FALLBACKS = {
+      "EMT Conduit":           <svg viewBox="0 0 40 40" fill="none" width="32" height="32"><rect x="2" y="15" width="36" height="6" rx="3" fill="#94a3b8"/><rect x="2" y="15" width="5" height="6" rx="2" fill="#64748b"/><rect x="33" y="15" width="5" height="6" rx="2" fill="#64748b"/><rect x="2" y="22" width="36" height="5" rx="2.5" fill="#b0bec5"/></svg>,
+      "Couplings & Connectors":<svg viewBox="0 0 40 40" fill="none" width="32" height="32"><rect x="0" y="16" width="10" height="8" rx="2" fill="#94a3b8"/><rect x="30" y="16" width="10" height="8" rx="2" fill="#94a3b8"/><rect x="9" y="13" width="22" height="14" rx="5" fill="#64748b"/><rect x="13" y="17" width="14" height="6" rx="2" fill="#94a3b8" opacity="0.35"/></svg>,
+      "Straps & Hangers":      <svg viewBox="0 0 40 40" fill="none" width="32" height="32"><rect x="10" y="5" width="20" height="5" rx="2.5" fill="#94a3b8"/><path d="M11 10 Q11 30 20 30 Q29 30 29 10" stroke="#64748b" strokeWidth="3.5" fill="none" strokeLinecap="round"/><circle cx="20" cy="20" r="6" fill="none" stroke="#94a3b8" strokeWidth="2.5"/></svg>,
+      "Caddy Hardware":        <svg viewBox="0 0 40 40" fill="none" width="32" height="32"><rect x="5" y="5" width="30" height="6" rx="3" fill="#64748b"/><path d="M11 11 L11 28 Q11 34 20 34 Q29 34 29 28 L29 11" stroke="#64748b" strokeWidth="3.5" fill="none"/><line x1="11" y1="22" x2="29" y2="22" stroke="#94a3b8" strokeWidth="2" strokeDasharray="3 2"/></svg>,
+      "Boxes & Covers":        <svg viewBox="0 0 40 40" fill="none" width="32" height="32"><rect x="4" y="5" width="32" height="30" rx="3" fill="#64748b"/><rect x="6" y="7" width="28" height="26" rx="2" fill="#94a3b8"/><circle cx="4" cy="20" r="3" fill="#475569"/><circle cx="36" cy="20" r="3" fill="#475569"/><rect x="12" y="14" width="16" height="12" rx="1.5" fill="#f1f5f9" opacity="0.3"/></svg>,
+      "Flex & Fittings":       <svg viewBox="0 0 40 40" fill="none" width="32" height="32"><path d="M2 20 C6 13,10 27,14 20 C18 13,22 27,26 20 C30 13,34 27,38 20" stroke="#64748b" strokeWidth="5" fill="none" strokeLinecap="round"/><path d="M2 20 C6 13,10 27,14 20 C18 13,22 27,26 20 C30 13,34 27,38 20" stroke="#94a3b8" strokeWidth="1.5" fill="none" strokeLinecap="round" opacity="0.5"/></svg>,
+      "Strut & Fasteners":     <svg viewBox="0 0 40 40" fill="none" width="32" height="32"><rect x="2" y="10" width="36" height="20" rx="2" fill="#64748b"/><rect x="4" y="12" width="32" height="16" rx="1.5" fill="#f3f4f6"/><rect x="4" y="12" width="32" height="4" rx="1" fill="#cbd5e1"/><rect x="4" y="24" width="32" height="4" rx="1" fill="#cbd5e1"/><circle cx="30" cy="32" r="6" fill="#475569"/><circle cx="30" cy="32" r="3.5" fill="#94a3b8"/></svg>,
+      "#12 THHN Wire":         <svg viewBox="0 0 40 40" fill="none" width="32" height="32"><circle cx="20" cy="20" r="17" fill="#64748b"/><circle cx="20" cy="20" r="11" fill="#475569"/><circle cx="20" cy="20" r="5" fill="#334155"/><path d="M20 3 A17 17 0 0 1 37 20" stroke="#f59e0b" strokeWidth="3" fill="none" strokeLinecap="round"/><path d="M37 20 A17 17 0 0 1 20 37" stroke="#f59e0b" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.6"/><path d="M20 37 A17 17 0 0 1 3 20" stroke="#f59e0b" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.3"/></svg>,
+      "#10 THHN Wire":         <svg viewBox="0 0 40 40" fill="none" width="32" height="32"><circle cx="20" cy="20" r="17" fill="#64748b"/><circle cx="20" cy="20" r="11" fill="#475569"/><circle cx="20" cy="20" r="5" fill="#334155"/><path d="M20 3 A17 17 0 0 1 37 20" stroke="#f59e0b" strokeWidth="3" fill="none" strokeLinecap="round"/><path d="M37 20 A17 17 0 0 1 20 37" stroke="#f59e0b" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.6"/><path d="M20 37 A17 17 0 0 1 3 20" stroke="#f59e0b" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.3"/></svg>,
+      "Data / Low Voltage":    <svg viewBox="0 0 40 40" fill="none" width="32" height="32"><rect x="13" y="5" width="18" height="16" rx="2.5" fill="#64748b"/><rect x="16" y="19" width="12" height="7" rx="1.5" fill="#475569"/><line x1="17" y1="8" x2="17" y2="19" stroke="#94a3b8" strokeWidth="1.8"/><line x1="21" y1="8" x2="21" y2="19" stroke="#94a3b8" strokeWidth="1.8"/><line x1="25" y1="8" x2="25" y2="19" stroke="#94a3b8" strokeWidth="1.8"/><path d="M2 34 C6 28,10 38,14 34" stroke="#3b82f6" strokeWidth="3" fill="none" strokeLinecap="round"/></svg>,
+      "Wire Nuts":             <svg viewBox="0 0 40 40" fill="none" width="32" height="32"><path d="M13 36 L20 8 L27 36 Z" fill="#64748b"/><path d="M13 36 Q20 39 27 36 L27 32 Q20 35 13 32 Z" fill="#475569"/><path d="M14 28 Q20 32 26 28" stroke="#94a3b8" strokeWidth="1.8" fill="none"/><path d="M15 21 Q20 25 25 21" stroke="#94a3b8" strokeWidth="1.8" fill="none"/><line x1="17" y1="36" x2="16" y2="40" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round"/><line x1="20" y1="36" x2="20" y2="40" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round"/><line x1="23" y1="36" x2="24" y2="40" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round"/></svg>,
+      "Terminals & Tape":      <svg viewBox="0 0 40 40" fill="none" width="32" height="32"><circle cx="20" cy="20" r="17" fill="#64748b"/><ellipse cx="20" cy="20" rx="17" ry="6" fill="#475569" transform="rotate(-20 20 20)" opacity="0.5"/><circle cx="20" cy="20" r="9" fill="#f3f4f6"/><circle cx="20" cy="20" r="5" fill="#d1d5db"/></svg>,
+    };
+
+    // Color swatches for wire / tape / nut items
+    const SWATCHES = {
+      Brown: "#92400e", Orange: "#c2410c", Yellow: "#ca8a04",
+      Green: "#15803d", Red: "#b91c1c", Blue: "#1d4ed8",
+      Black: "#18181b", White: "#cbd5e1", Tan: "#b5986a",
+    };
+    function getSwatch(name) {
+      for (const [color, hex] of Object.entries(SWATCHES)) {
+        if (name.includes(color)) return hex;
+      }
+      return null;
+    }
+
+    // Image with automatic fallback to SVG if it fails or is offline
+    function CatPhoto({ src, category }) {
+      const [failed, setFailed] = useState(false);
+      if (failed || !src) {
+        return FALLBACKS[category] || <span style={{ fontSize: 22 }}>⚡</span>;
+      }
+      return <img className="cat-img" src={src} alt={category} onError={() => setFailed(true)} />;
+    }
+
+    // ── Export helpers ────────────────────────────────────────────────────────
+    function buildText(jobName, jobLocation, quantities, customs) {
+      const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+      let t = `MATERIAL LIST\n${"═".repeat(44)}\nJob:      ${jobName || "—"}\nLocation: ${jobLocation || "—"}\nDate:     ${date}\n${"═".repeat(44)}\n\n`;
+      MATERIALS.forEach(({ category, items }) => {
+        t += `── ${category.toUpperCase()} ──\n`;
+        items.forEach(item => {
+          const q = quantities[item] || 0;
+          t += `  ${q > 0 ? String(q).padStart(4) : "   —"}  ${item}\n`;
+        });
+        t += "\n";
+      });
+      const filled = customs.filter(c => c.name.trim());
+      if (filled.length) {
+        t += `── CUSTOM ITEMS ──\n`;
+        filled.forEach(c => { t += `  ${c.qty > 0 ? String(c.qty).padStart(4) : "   —"}  ${c.name}\n`; });
+      }
+      return t;
+    }
+
+    function buildPrintHtml(jobName, jobLocation, quantities, customs) {
+      const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+      let rows = "";
+      MATERIALS.forEach(({ category, items }) => {
+        rows += `<tr class="cat"><td colspan="2">${category}</td></tr>`;
+        items.forEach(item => {
+          const q = quantities[item] || 0;
+          rows += `<tr class="${q > 0 ? "active" : ""}"><td>${item}</td><td class="qty">${q > 0 ? q : ""}</td></tr>`;
+        });
+      });
+      const filled = customs.filter(c => c.name.trim());
+      if (filled.length) {
+        rows += `<tr class="cat"><td colspan="2">Custom Items</td></tr>`;
+        filled.forEach(c => { rows += `<tr class="${c.qty > 0 ? "active" : ""}"><td>${c.name}</td><td class="qty">${c.qty > 0 ? c.qty : ""}</td></tr>`; });
+      }
+      return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Material List</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui,sans-serif;font-size:10pt;padding:24px 32px;color:#111}
+header{border-bottom:3px solid #111;padding-bottom:12px;margin-bottom:16px}h1{font-size:18pt;font-weight:800;margin-bottom:8px}
+.meta div{font-size:9.5pt;color:#444;line-height:1.9}.meta strong{display:inline-block;width:72px;color:#111}
+table{width:100%;border-collapse:collapse}tr{border-bottom:1px solid #e5e7eb}td{padding:4px 8px;font-size:9.5pt;vertical-align:middle}
+tr.cat td{background:#111;color:#fff;font-weight:700;font-size:8pt;letter-spacing:1px;padding:5px 8px}
+td.qty{text-align:right;font-weight:800;font-size:12pt;width:48px}tr.active{background:#eff6ff}tr.active td.qty{color:#1d4ed8}
+footer{margin-top:16px;border-top:1px solid #ccc;padding-top:8px;font-size:8pt;color:#888;display:flex;justify-content:space-between}
+@media print{body{padding:0}}</style></head><body>
+<header><h1>⚡ Material List</h1><div class="meta">
+<div><strong>Job:</strong>${jobName||"—"}</div><div><strong>Location:</strong>${jobLocation||"—"}</div><div><strong>Date:</strong>${date}</div>
+</div></header><table>${rows}</table>
+<footer><span>Field List — Electrical Material Tracker</span><span>Printed ${new Date().toLocaleTimeString()}</span></footer>
+</body></html>`;
+    }
+
+    // ── Stepper ───────────────────────────────────────────────────────────────
+    function Stepper({ value, onChange }) {
+      const active = (value || 0) > 0;
+      const btn = (label, action, extra = {}) => (
+        <button onClick={action} style={{
+          width: 38, height: 42, border: "1.5px solid", fontFamily: "inherit",
+          fontSize: 20, fontWeight: 700, cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          ...extra,
+        }}>{label}</button>
+      );
+      return (
+        <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
+          {btn("−", () => onChange(Math.max(0, (value||0)-1)), {
+            borderRadius: "8px 0 0 8px", borderColor: "#e5e7eb", borderRight: "none",
+            background: "#f9fafb", color: "#374151", opacity: active ? 1 : 0.35,
+          })}
+          <input type="number" min="0" value={value||""} placeholder="0"
+            onChange={e => onChange(Math.max(0, parseInt(e.target.value)||0))}
+            style={{
+              width: 52, height: 42, textAlign: "center", border: "1.5px solid #e5e7eb",
+              borderLeft: "none", borderRight: "none", fontSize: 15, fontFamily: "inherit",
+              outline: "none", background: "#fff", padding: 0,
+              color: active ? "#1d4ed8" : "#9ca3af", fontWeight: active ? 700 : 400,
+            }}
+          />
+          {btn("+", () => onChange((value||0)+1), {
+            borderRadius: "0 8px 8px 0",
+            borderColor: active ? "#1d4ed8" : "#e5e7eb",
+            background: active ? "#1d4ed8" : "#f9fafb",
+            color: active ? "#fff" : "#374151",
+          })}
+        </div>
+      );
+    }
+
+    // ── Category Section ──────────────────────────────────────────────────────
+    function CategorySection({ category, img, items, quantities, onQtyChange }) {
+      const [open, setOpen] = useState(true);
+      const filled = items.filter(i => (quantities[i]||0) > 0).length;
+      return (
+        <div style={{ background:"#fff", borderRadius:14, marginBottom:10, overflow:"hidden", boxShadow:"0 1px 3px rgba(0,0,0,0.07)" }}>
+          <button onClick={() => setOpen(o => !o)} style={{
+            width:"100%", background:"none", border:"none", padding:"12px 16px",
+            display:"flex", alignItems:"center", gap:12, cursor:"pointer",
+            borderBottom: open ? "1px solid #f3f4f6" : "none",
+          }}>
+            <div className="cat-img-wrap">
+              <CatPhoto src={img} category={category} />
+            </div>
+            <span style={{ fontSize:15, fontWeight:700, color:"#111827", flex:1, fontFamily:"'Outfit',sans-serif", textAlign:"left" }}>{category}</span>
+            <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
+              {filled > 0 && (
+                <span style={{ fontSize:11, fontWeight:600, color:"#1d4ed8", background:"#eff6ff", borderRadius:10, padding:"2px 8px", border:"1px solid #bfdbfe", fontFamily:"'Outfit',sans-serif" }}>
+                  {filled} entered
+                </span>
+              )}
+              <span style={{ fontSize:11, color:"#9ca3af", display:"inline-block", transform: open ? "rotate(180deg)" : "rotate(0)", transition:"transform 0.2s" }}>▼</span>
+            </div>
+          </button>
+
+          {open && items.map((item, idx) => {
+            const qty = quantities[item] || 0;
+            const swatch = getSwatch(item);
+            return (
+              <div key={item} style={{
+                display:"flex", alignItems:"center", justifyContent:"space-between",
+                padding:"10px 16px", gap:12,
+                background: qty > 0 ? "#eff6ff" : idx % 2 === 0 ? "#fff" : "#fafafa",
+                borderBottom:"1px solid #f3f4f6",
+              }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8, flex:1, minWidth:0 }}>
+                  {swatch && <span style={{ width:11, height:11, borderRadius:"50%", background:swatch, flexShrink:0, border:"1.5px solid rgba(0,0,0,0.15)", display:"inline-block" }} />}
+                  <span style={{ fontSize:14, lineHeight:1.35, color: qty>0 ? "#1e3a5f" : "#374151", fontWeight: qty>0 ? 600 : 400, fontFamily:"'Outfit',sans-serif" }}>
+                    {item}
+                  </span>
+                </div>
+                <Stepper value={qty} onChange={v => onQtyChange(item, v)} />
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    // ── Export Sheet ──────────────────────────────────────────────────────────
+    function ExportSheet({ onClose, jobName, jobLocation, quantities, customs }) {
+      const [copied, setCopied] = useState(false);
+      const text = buildText(jobName, jobLocation, quantities, customs);
+      const filledCount = Object.values(quantities).filter(v=>v>0).length + customs.filter(c=>c.name.trim()&&c.qty>0).length;
+
+      const copy  = () => navigator.clipboard.writeText(text).then(()=>{ setCopied(true); setTimeout(()=>setCopied(false),2500); });
+      const share = () => navigator.share ? navigator.share({ title:`Material List — ${jobName||"Job"}`, text }) : copy();
+      const email = () => { window.location.href=`mailto:?subject=${encodeURIComponent("Material List — "+(jobName||"Job"))}&body=${encodeURIComponent(text)}`; };
+      const sms   = () => { window.location.href=`sms:?&body=${encodeURIComponent(text)}`; };
+      const print = () => { const w=window.open("","_blank"); if(w){ w.document.write(buildPrintHtml(jobName,jobLocation,quantities,customs)); w.document.close(); setTimeout(()=>w.print(),350); }};
+
+      const tiles = [
+        { icon:"↑",               label:"Share",              sub:"Native share sheet",  fn:share },
+        { icon:copied?"✓":"⎘",   label:copied?"Copied!":"Copy", sub:"To clipboard",    fn:copy  },
+        { icon:"✉",               label:"Email",              sub:"Opens mail app",      fn:email },
+        { icon:"💬",              label:"Text",               sub:"Opens Messages",      fn:sms   },
+      ];
+
+      return (
+        <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", zIndex:200, display:"flex", alignItems:"flex-end", justifyContent:"center" }}>
+          <div onClick={e=>e.stopPropagation()} style={{ background:"#fff", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:540, paddingBottom:24 }}>
+            <div style={{ width:36, height:4, background:"#e5e7eb", borderRadius:2, margin:"12px auto 16px" }} />
+            <div style={{ padding:"0 20px" }}>
+              <h2 style={{ fontSize:20, fontWeight:800, color:"#111827", marginBottom:4, fontFamily:"'Outfit',sans-serif" }}>Export List</h2>
+              <p style={{ fontSize:13, color:"#6b7280", marginBottom:18, fontFamily:"'Outfit',sans-serif" }}>{filledCount} item{filledCount!==1?"s":""} with quantities · {new Date().toLocaleDateString()}</p>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:10 }}>
+                {tiles.map(({ icon, label, sub, fn }) => (
+                  <button key={label} onClick={fn} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:3, background:"#f9fafb", border:"1.5px solid #e5e7eb", borderRadius:12, padding:"16px 12px", cursor:"pointer", fontFamily:"'Outfit',sans-serif", textAlign:"center" }}>
+                    <span style={{ fontSize:24, marginBottom:2 }}>{icon}</span>
+                    <span style={{ fontSize:14, fontWeight:700, color:"#111827" }}>{label}</span>
+                    <span style={{ fontSize:11, color:"#9ca3af" }}>{sub}</span>
+                  </button>
+                ))}
+              </div>
+              <button onClick={print} style={{ width:"100%", display:"flex", alignItems:"center", gap:14, background:"#f9fafb", border:"1.5px solid #e5e7eb", borderRadius:12, padding:"14px 18px", cursor:"pointer", fontFamily:"'Outfit',sans-serif", marginBottom:10, textAlign:"left" }}>
+                <span style={{ fontSize:22 }}>🖨</span>
+                <div>
+                  <div style={{ fontSize:14, fontWeight:700, color:"#111827" }}>Print / Save PDF</div>
+                  <div style={{ fontSize:11, color:"#9ca3af" }}>Opens clean print layout — use Save as PDF</div>
+                </div>
+              </button>
+              <button onClick={onClose} style={{ width:"100%", background:"#f3f4f6", border:"none", borderRadius:10, padding:"13px", fontSize:15, fontWeight:600, color:"#6b7280", cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ── Preview Modal ─────────────────────────────────────────────────────────
+    function PreviewModal({ onClose, onExport, jobName, jobLocation, quantities, customs }) {
+      return (
+        <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", zIndex:200, display:"flex", alignItems:"flex-end", justifyContent:"center" }}>
+          <div onClick={e=>e.stopPropagation()} style={{ background:"#fff", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:540, maxHeight:"90vh", display:"flex", flexDirection:"column", paddingTop:12 }}>
+            <div style={{ width:36, height:4, background:"#e5e7eb", borderRadius:2, margin:"0 auto 12px" }} />
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 20px 12px", borderBottom:"1px solid #f3f4f6", flexShrink:0 }}>
+              <h2 style={{ fontSize:20, fontWeight:800, color:"#111827", fontFamily:"'Outfit',sans-serif" }}>Preview</h2>
+              <button onClick={onClose} style={{ background:"none", border:"none", fontSize:22, color:"#9ca3af", cursor:"pointer", padding:4 }}>✕</button>
+            </div>
+            <div style={{ padding:"10px 20px", borderBottom:"1px solid #f3f4f6", flexShrink:0 }}>
+              <div style={{ display:"flex", gap:16, flexWrap:"wrap", fontSize:13, color:"#6b7280", fontFamily:"'Outfit',sans-serif" }}>
+                <span><strong style={{ color:"#374151" }}>Job:</strong> {jobName||"—"}</span>
+                <span><strong style={{ color:"#374151" }}>Loc:</strong> {jobLocation||"—"}</span>
+                <span><strong style={{ color:"#374151" }}>Date:</strong> {new Date().toLocaleDateString()}</span>
+              </div>
+            </div>
+            <div style={{ overflowY:"auto", flex:1, padding:"12px 20px" }}>
+              {MATERIALS.map(({ category, img, items }) => (
+                <div key={category} style={{ marginBottom:16 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+                    <div style={{ width:22, height:22, borderRadius:5, overflow:"hidden", flexShrink:0, background:"#f1f5f9", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      <CatPhoto src={img} category={category} />
+                    </div>
+                    <div style={{ fontSize:10, fontWeight:700, letterSpacing:1.5, color:"#9ca3af", textTransform:"uppercase", fontFamily:"'Outfit',sans-serif" }}>{category}</div>
+                  </div>
+                  {items.map(item => {
+                    const q = quantities[item]||0;
+                    const swatch = getSwatch(item);
+                    return (
+                      <div key={item} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"5px 0", borderBottom:"1px solid #f3f4f6" }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+                          {swatch && <span style={{ width:9, height:9, borderRadius:"50%", background:swatch, flexShrink:0, border:"1.5px solid rgba(0,0,0,0.1)", display:"inline-block" }} />}
+                          <span style={{ fontSize:13, color: q>0 ? "#1e3a5f" : "#9ca3af", fontFamily:"'Outfit',sans-serif" }}>{item}</span>
+                        </div>
+                        <span style={{ fontSize:15, fontWeight:700, color: q>0 ? "#1d4ed8" : "#d1d5db", minWidth:28, textAlign:"right", fontFamily:"'Outfit',sans-serif" }}>{q>0?q:"—"}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+              {customs.filter(c=>c.name.trim()).length > 0 && (
+                <div style={{ marginBottom:16 }}>
+                  <div style={{ fontSize:10, fontWeight:700, letterSpacing:1.5, color:"#9ca3af", textTransform:"uppercase", marginBottom:6, fontFamily:"'Outfit',sans-serif" }}>Custom Items</div>
+                  {customs.filter(c=>c.name.trim()).map(c => (
+                    <div key={c.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"5px 0", borderBottom:"1px solid #f3f4f6" }}>
+                      <span style={{ fontSize:13, color: c.qty>0 ? "#1e3a5f" : "#9ca3af", fontFamily:"'Outfit',sans-serif" }}>{c.name}</span>
+                      <span style={{ fontSize:15, fontWeight:700, color: c.qty>0 ? "#1d4ed8" : "#d1d5db", minWidth:28, textAlign:"right", fontFamily:"'Outfit',sans-serif" }}>{c.qty>0?c.qty:"—"}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div style={{ padding:"12px 20px 20px", borderTop:"1px solid #e5e7eb", display:"flex", gap:10, flexShrink:0 }}>
+              <button onClick={onClose} style={{ flex:1, background:"#f3f4f6", border:"none", borderRadius:10, padding:"13px", fontSize:15, fontWeight:600, color:"#6b7280", cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>Close</button>
+              <button onClick={onExport} style={{ flex:2, background:"#1d4ed8", border:"none", borderRadius:10, padding:"13px", fontSize:15, fontWeight:700, color:"#fff", cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>Export ↑</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ── Main App ──────────────────────────────────────────────────────────────
+    function App() {
+      const [jobName, setJobName]       = useState("");
+      const [jobLocation, setJobLocation] = useState("");
+      const [quantities, setQuantities] = useState({});
+      const [customs, setCustoms]       = useState([{ id:1, name:"", qty:0 }]);
+      const [modal, setModal]           = useState(null);
+      const [filterFilled, setFilterFilled] = useState(false);
+
+      const setQty = useCallback((item, val) => setQuantities(q => ({ ...q, [item]: val })), []);
+      const addCustom    = () => setCustoms(c => [...c, { id:Date.now(), name:"", qty:0 }]);
+      const removeCustom = id => setCustoms(c => c.filter(i => i.id !== id));
+      const updateCustom = (id, field, val) => setCustoms(c => c.map(i => i.id===id ? { ...i, [field]:val } : i));
+
+      const totalFilled = Object.values(quantities).filter(v=>v>0).length + customs.filter(c=>c.name.trim()&&c.qty>0).length;
+
+      const clearAll = () => {
+        if (window.confirm("Clear all quantities and job info?")) {
+          setQuantities({}); setCustoms([{id:1,name:"",qty:0}]); setJobName(""); setJobLocation("");
+        }
+      };
+
+      const shared = { jobName, jobLocation, quantities, customs };
+
+      const inputStyle = { display:"block", width:"100%", border:"1.5px solid #e5e7eb", borderRadius:8, fontSize:15, color:"#111827", padding:"10px 12px", fontFamily:"'Outfit',sans-serif", outline:"none", background:"#fafafa" };
+      const labelStyle = { display:"block", fontSize:11, fontWeight:600, color:"#6b7280", marginBottom:5, fontFamily:"'Outfit',sans-serif" };
+
+      return (
+        <div style={{ minHeight:"100vh", background:"#f3f4f6", maxWidth:540, margin:"0 auto" }}>
+
+          {/* ── Header ── */}
+          <header style={{ background:"#111827", padding:"14px 20px", position:"sticky", top:0, zIndex:50, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+            <div>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <span style={{ fontSize:22 }}>⚡</span>
+                <span style={{ fontSize:20, fontWeight:800, color:"#fff", letterSpacing:-0.5, fontFamily:"'Outfit',sans-serif" }}>Field List</span>
+              </div>
+              <div style={{ fontSize:11, color:"#6b7280", letterSpacing:0.5, marginTop:1, fontFamily:"'Outfit',sans-serif" }}>Electrical Material Tracker</div>
+            </div>
+            {totalFilled > 0 && (
+              <div style={{ background:"#1d4ed8", color:"#fff", borderRadius:20, padding:"4px 14px", fontSize:13, fontWeight:700, fontFamily:"'Outfit',sans-serif" }}>
+                {totalFilled} item{totalFilled!==1?"s":""}
+              </div>
+            )}
+          </header>
+
+          <div style={{ padding:"14px 12px" }}>
+
+            {/* ── Job Info ── */}
+            <div style={{ background:"#fff", borderRadius:14, marginBottom:10, overflow:"hidden", boxShadow:"0 1px 3px rgba(0,0,0,0.07)" }}>
+              <div style={{ fontSize:11, fontWeight:700, letterSpacing:1, textTransform:"uppercase", color:"#9ca3af", padding:"12px 16px 10px", borderBottom:"1px solid #f3f4f6", fontFamily:"'Outfit',sans-serif" }}>
+                Job Information
+              </div>
+              <div style={{ padding:"12px 16px 16px", display:"flex", flexDirection:"column", gap:10 }}>
+                <div>
+                  <label style={labelStyle}>Job Name</label>
+                  <input style={inputStyle} placeholder="e.g. Westside Office Build-Out" value={jobName} onChange={e=>setJobName(e.target.value)} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Location / Address</label>
+                  <input style={inputStyle} placeholder="e.g. 123 Main St, Suite 400" value={jobLocation} onChange={e=>setJobLocation(e.target.value)} />
+                </div>
+              </div>
+            </div>
+
+            {/* ── Toolbar ── */}
+            <div style={{ display:"flex", gap:8, marginBottom:10 }}>
+              <button onClick={()=>setFilterFilled(v=>!v)} style={{ flex:1, background:filterFilled?"#eff6ff":"#fff", border:filterFilled?"1.5px solid #bfdbfe":"1.5px solid #e5e7eb", color:filterFilled?"#1d4ed8":"#6b7280", borderRadius:8, padding:"10px 12px", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>
+                {filterFilled ? "● Filled only" : "○ All items"}
+              </button>
+              <button onClick={clearAll} style={{ flex:1, background:"#fff", border:"1.5px solid #e5e7eb", color:"#6b7280", borderRadius:8, padding:"10px 12px", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>✕ Clear all</button>
+            </div>
+
+            {/* ── Material Categories ── */}
+            {MATERIALS.map(({ category, img, items }) => {
+              const visible = filterFilled ? items.filter(i=>(quantities[i]||0)>0) : items;
+              if (filterFilled && visible.length === 0) return null;
+              return <CategorySection key={category} category={category} img={img} items={visible} quantities={quantities} onQtyChange={setQty} />;
+            })}
+
+            {/* ── Custom Items ── */}
+            <div style={{ background:"#fff", borderRadius:14, marginBottom:10, overflow:"hidden", boxShadow:"0 1px 3px rgba(0,0,0,0.07)" }}>
+              <div style={{ fontSize:11, fontWeight:700, letterSpacing:1, textTransform:"uppercase", color:"#9ca3af", padding:"12px 16px 10px", borderBottom:"1px solid #f3f4f6", fontFamily:"'Outfit',sans-serif" }}>Custom Items</div>
+              <div style={{ padding:"12px 16px 8px" }}>
+                {customs.map((item, idx) => (
+                  <div key={item.id} style={{ display:"flex", alignItems:"flex-end", gap:8, marginBottom:12 }}>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <label style={labelStyle}>Item {idx+1}</label>
+                      <input style={inputStyle} placeholder="Describe the material…" value={item.name} onChange={e=>updateCustom(item.id,"name",e.target.value)} />
+                    </div>
+                    <Stepper value={item.qty} onChange={v=>updateCustom(item.id,"qty",v)} />
+                    {customs.length > 1 && (
+                      <button onClick={()=>removeCustom(item.id)} style={{ background:"none", border:"none", color:"#d1d5db", fontSize:18, cursor:"pointer", paddingBottom:8 }}>✕</button>
+                    )}
+                  </div>
+                ))}
+                <button onClick={addCustom} style={{ width:"100%", background:"none", border:"1.5px dashed #d1d5db", borderRadius:8, color:"#9ca3af", fontSize:13, fontWeight:600, padding:"10px", cursor:"pointer", fontFamily:"'Outfit',sans-serif", marginBottom:4 }}>
+                  + Add Another Item
+                </button>
+              </div>
+            </div>
+
+            {/* ── Actions ── */}
+            <div style={{ display:"flex", gap:10, marginTop:4, paddingBottom:48 }}>
+              <button onClick={()=>setModal("preview")} style={{ flex:1, background:"#fff", border:"1.5px solid #e5e7eb", color:"#374151", borderRadius:12, padding:"14px", fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>📋 Preview</button>
+              <button onClick={()=>setModal("export")}  style={{ flex:2, background:"#1d4ed8", border:"none", color:"#fff", borderRadius:12, padding:"14px", fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>⬆ Export</button>
+            </div>
+          </div>
+
+          {modal==="preview" && <PreviewModal {...shared} onClose={()=>setModal(null)} onExport={()=>setModal("export")} />}
+          {modal==="export" && <ExportSheet  {...shared} onClose={()=>setModal(null)} />}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
